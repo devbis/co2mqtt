@@ -1,0 +1,11 @@
+[Unit]
+Description=CO2 monitor to Ubidots
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /opt/co2webmon/co2webmon.py
+
+[Install]
+WantedBy=multi-user.target
