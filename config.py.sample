@@ -1,3 +1,13 @@
+# Leave UBIDOTS_TOKEN or THINGSPEAK_KEY blank to
+# skip dumping the data to the corresponding service
+
 UBIDOTS_TOKEN = '*YOUR_TOKEN*'
 UBIDOTS_CO2_ID = '*CO2_ID*'
 UBIDOTS_TEMPERATURE_ID = '*TEMP_ID*'
+
+THINGSPEAK_KEY = '*YOUR_KEY*'
+THINGSPEAK_CO2_ID = 'field1'
+THINGSPEAK_TEMPERATURE_ID = 'field2'
+
+# or use field numbers from your thingspeak channel settings
+

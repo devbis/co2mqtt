@@ -46,24 +46,70 @@ async def publish_ubidots(token, **kwargs):
         logging.error('publish_ubidots got timeout')
 
 
-async def periodic_publish(ubidots_token, delay=20):
+async def publish_thingspeak(api_key, **kwargs):
+    thingspeak_map = (
+        ('co2_ppm', config.THINGSPEAK_CO2_ID),
+        ('temperature', config.THINGSPEAK_TEMPERATURE_ID),
+    )
+
+    domain = 'api.thingspeak.com'
+    url_tpl = '/update?api_key={api_key}&{data}'
+    url = url_tpl.format(
+        api_key=api_key,
+        data='&'.join(
+            '{}={}'.format(field_id, kwargs[var_name])
+            for var_name, field_id in thingspeak_map
+        )
+    )
+    logging.info('Publish data thingspeak: {}'.format(url))
+
+    reader, writer = await asyncio.open_connection(domain, 80)
+    query = \
+        "GET {} HTTP/1.0\r\n" \
+        "Host: {}\r\n\r\n".format(
+            url,
+            domain,
+        )
+    try:
+        writer.write(query.encode('latin-1'))
+        while True:
+            line = await reader.readline()
+            if not line:
+                break
+    except asyncio.TimeoutError:
+        logging.error('publish_thingspeak got timeout')
+
+
+async def periodic_publish(*, ubidots_token, thingspeak_key, delay=20):
     while True:
         try:
-            await publish_data(ubidots_token)
+            await publish_data(
+                ubidots_token=ubidots_token,
+                thingspeak_key=thingspeak_key,
+            )
         except OSError:
             # skip socket.gaierror, try later
             pass
         await asyncio.sleep(delay)
 
 
-async def publish_data(ubidots_token=None):
+async def publish_data(*, ubidots_token=None, thingspeak_key=None):
     mon = co2.CO2monitor()
     dt, co2_ppm, temp = mon.read_data()
-    await publish_ubidots(
-        ubidots_token,
+    params = dict(
         co2_ppm='{0:d}'.format(co2_ppm),
         temperature='{0:.2f}'.format(temp),
     )
+    if ubidots_token:
+        await publish_ubidots(
+            ubidots_token,
+            **params,
+        )
+    if thingspeak_key:
+        await publish_thingspeak(
+            thingspeak_key,
+            **params,
+        )
 
 
 async def shutdown():
@@ -77,6 +123,7 @@ def main():
     try:
         loop.create_task(periodic_publish(
             ubidots_token=config.UBIDOTS_TOKEN,
+            thingspeak_key=config.THINGSPEAK_KEY,
         ))
         loop.run_forever()
     except KeyboardInterrupt:
