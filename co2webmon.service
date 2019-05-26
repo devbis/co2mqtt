@@ -1,5 +1,5 @@
 [Unit]
-Description=CO2 monitor to Ubidots
+Description=CO2 monitor to ThingSpeak
 Wants=network-online.target
 After=network-online.target
 

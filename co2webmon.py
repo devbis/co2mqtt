@@ -7,6 +7,7 @@ import co2meter as co2
 
 import config
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -14,7 +15,7 @@ async def publish_ubidots(token, **kwargs):
     domain = 'things.ubidots.com'
     url_tpl = '/api/v1.6/collections/values/?token={}'
     url = url_tpl.format(token)
-    logging.info('Publish data ubidots: {}'.format(url))
+    logger.info('Publish data ubidots: {}'.format(url))
 
     ubidots_map = (
         ('co2_ppm', config.UBIDOTS_CO2_ID),
@@ -43,7 +44,7 @@ async def publish_ubidots(token, **kwargs):
             if not line:
                 break
     except asyncio.TimeoutError:
-        logging.error('publish_ubidots got timeout')
+        logger.error('publish_ubidots got timeout')
 
 
 async def publish_thingspeak(api_key, **kwargs):
@@ -61,7 +62,7 @@ async def publish_thingspeak(api_key, **kwargs):
             for var_name, field_id in thingspeak_map
         )
     )
-    logging.info('Publish data thingspeak: {}'.format(url))
+    logger.info('Publish data thingspeak: {}'.format(url))
 
     reader, writer = await asyncio.open_connection(domain, 80)
     query = \
@@ -77,7 +78,7 @@ async def publish_thingspeak(api_key, **kwargs):
             if not line:
                 break
     except asyncio.TimeoutError:
-        logging.error('publish_thingspeak got timeout')
+        logger.error('publish_thingspeak got timeout')
 
 
 async def periodic_publish(*, ubidots_token, thingspeak_key, delay=20):
@@ -113,12 +114,13 @@ async def publish_data(*, ubidots_token=None, thingspeak_key=None):
 
 
 async def shutdown():
-    logging.info('Shutdown is running.')  # Happens in both cases
+    logger.info('Shutdown is running.')  # Happens in both cases
     await asyncio.sleep(1)
-    logging.info('done')
+    logger.info('done')
 
 
 def main():
+    logger.setLevel(logging.DEBUG)
     loop = asyncio.get_event_loop()
     try:
         loop.create_task(periodic_publish(
@@ -127,7 +129,7 @@ def main():
         ))
         loop.run_forever()
     except KeyboardInterrupt:
-        logging.warning('Keyboard interrupt at loop level.')
+        logger.warning('Keyboard interrupt at loop level.')
         loop.run_until_complete(shutdown())
     finally:
         loop.close()
