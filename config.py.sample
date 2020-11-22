@@ -9,5 +9,9 @@ THINGSPEAK_KEY = '*YOUR_KEY*'
 THINGSPEAK_CO2_ID = 'field1'
 THINGSPEAK_TEMPERATURE_ID = 'field2'
 
+MQTT_SERVER = '127.0.0.1'
+MQTT_USER = ''
+MQTT_PASSWORD = ''
+
 # or use field numbers from your thingspeak channel settings
 

@@ -45,6 +45,8 @@ async def publish_ubidots(token, **kwargs):
                 break
     except asyncio.TimeoutError:
         logger.error('publish_ubidots got timeout')
+    finally:
+        writer.close()
 
 
 async def publish_thingspeak(api_key, **kwargs):
@@ -79,6 +81,8 @@ async def publish_thingspeak(api_key, **kwargs):
                 break
     except asyncio.TimeoutError:
         logger.error('publish_thingspeak got timeout')
+    finally:
+        writer.close()
 
 
 async def periodic_publish(*, ubidots_token, thingspeak_key, delay=20):
@@ -88,9 +92,9 @@ async def periodic_publish(*, ubidots_token, thingspeak_key, delay=20):
                 ubidots_token=ubidots_token,
                 thingspeak_key=thingspeak_key,
             )
-        except OSError:
+        except OSError as e:
             # skip socket.gaierror, try later
-            pass
+            logging.exception(str(e))
         await asyncio.sleep(delay)
 
 
@@ -131,6 +135,9 @@ def main():
     except KeyboardInterrupt:
         logger.warning('Keyboard interrupt at loop level.')
         loop.run_until_complete(shutdown())
+    except Exception:
+        loop.run_until_complete(shutdown())
+        raise
     finally:
         loop.close()
 

@@ -1,1 +1,2 @@
 CO2meter==0.2.5
+aio-mqtt==0.2.0
