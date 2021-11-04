@@ -28,7 +28,8 @@ class CarbonDioxideMQTT:
             self._loop.create_task(self._periodic_publish())
         ]
 
-        self._co2 = co2.CO2monitor()
+        self._bypass_decrypt = False
+        self._co2 = co2.CO2monitor(bypass_decrypt=self._bypass_decrypt)
         self.device_name = \
             f'{self._co2.info["product_name"]}_' \
             f'{self._co2.info["serial_no"].replace(".", "_")}'
@@ -129,8 +130,19 @@ class CarbonDioxideMQTT:
                 logger.info("Disconnected")
                 return
 
-    async def _read_and_publish(self):
+    def _read(self):
         dt, co2_ppm, temp = self._co2.read_data()
+        if co2_ppm is None and temp is None:
+            self._bypass_decrypt = not self._bypass_decrypt
+            logger.warning(
+                f'Fallback to read with bypass_decrypt={self._bypass_decrypt}',
+            )
+            self._co2 = co2.CO2monitor(bypass_decrypt=self._bypass_decrypt)
+            dt, co2_ppm, temp = self._co2.read_data()
+        return dt, co2_ppm, temp
+
+    async def _read_and_publish(self):
+        dt, co2_ppm, temp = self._read()
         await self._client.publish(
             aio_mqtt.PublishableMessage(
                 topic_name=f"{self.mqtt_prefix}/sensor/state",
@@ -153,17 +165,16 @@ class CarbonDioxideMQTT:
                     timeout=15,
                 )
             except asyncio.TimeoutError:
-                logger.error("Read and publish timeout", exc_info=e)
+                logger.exception("Read and publish timeout")
                 continue
             except aio_mqtt.ConnectionClosedError as e:
-                logger.error("Connection closed", exc_info=e)
+                logger.exception("Connection closed")
                 await self._client.wait_for_connect()
                 continue
 
-            except Exception as e:
-                logger.error(
+            except Exception:
+                logger.exception(
                     "Unhandled exception during echo message publishing",
-                    exc_info=e,
                 )
             await asyncio.sleep(period)
 
