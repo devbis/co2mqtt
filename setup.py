@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     name='co2mqtt',
     version='1.0.0',
-    description='Client for Holtek CO2 sensor',
+    description='Client for MT8057 CO2 sensor',
     # long_description='',
     # long_description_content_type="text/x-rst",
     author='Ivan Belokobylskiy',
@@ -21,6 +21,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Utilities',
     ],

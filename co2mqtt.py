@@ -23,10 +23,7 @@ class CarbonDioxideMQTT:
         self._reconnection_interval = reconnection_interval
         self._loop = loop or asyncio.get_event_loop()
         self._client = aio_mqtt.Client(loop=self._loop)
-        self._tasks = [
-            self._loop.create_task(self._connect_forever()),
-            self._loop.create_task(self._periodic_publish())
-        ]
+        self._tasks = []
 
         self._bypass_decrypt = False
         self._co2 = co2.CO2monitor(bypass_decrypt=self._bypass_decrypt)
@@ -35,6 +32,12 @@ class CarbonDioxideMQTT:
             f'{self._co2.info["serial_no"].replace(".", "_")}'
 
         self.mqtt_prefix = f'homeassistant/sensor/{self.device_name}'
+
+    def start(self):
+        self._tasks = [
+            self._loop.create_task(self._connect_forever()),
+            self._loop.create_task(self._periodic_publish())
+        ]
 
     async def close(self) -> None:
         for task in self._tasks:
@@ -56,9 +59,7 @@ class CarbonDioxideMQTT:
                     username=config.MQTT_USER,
                     password=config.MQTT_PASSWORD,
                 )
-                logger.info("Connected")
-
-                print(f'{self.mqtt_prefix}/co2/config')
+                logger.info(f"Connected to {config.MQTT_SERVER}.")
 
                 device = {
                     "identifiers": [
@@ -107,23 +108,26 @@ class CarbonDioxideMQTT:
             except asyncio.CancelledError:
                 raise
 
-            except aio_mqtt.AccessRefusedError as e:
-                logger.error("Access refused", exc_info=e)
+            except aio_mqtt.AccessRefusedError:
+                logger.exception("Access refused")
 
             except (
                 aio_mqtt.ConnectionLostError,
                 aio_mqtt.ConnectionClosedError,
                 aio_mqtt.ServerDiedError,
-            ) as e:
-                logger.error("Connection lost. Will retry in %d seconds", self._reconnection_interval, exc_info=e)
+            ):
+                logger.exception(
+                    "Connection lost. Will retry in %d seconds",
+                    self._reconnection_interval,
+                )
                 await asyncio.sleep(self._reconnection_interval, loop=self._loop)
 
-            except aio_mqtt.ConnectionCloseForcedError as e:
-                logger.error("Connection close forced", exc_info=e)
+            except aio_mqtt.ConnectionCloseForcedError:
+                logger.error("Connection close forced")
                 return
 
-            except Exception as e:
-                logger.error("Unhandled exception during connecting", exc_info=e)
+            except Exception:
+                logger.exception("Unhandled exception during connecting")
                 return
 
             else:
@@ -186,15 +190,14 @@ async def shutdown():
 
 
 def main():
-    logging.basicConfig(
-        level='DEBUG'
-    )
-    loop = asyncio.new_event_loop()
+    logging.basicConfig(level='INFO')
+    loop = asyncio.get_event_loop()
     server = CarbonDioxideMQTT(
         reconnection_interval=10,
         loop=loop,
     )
     try:
+        server.start()
         loop.run_forever()
     except KeyboardInterrupt:
         logger.warning('Keyboard interrupt at loop level.')

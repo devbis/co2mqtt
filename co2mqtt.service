@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 /opt/co2webmon/co2mqtt.py
+ExecStart=/usr/bin/env python3 /opt/co2mqtt/co2mqtt.py
 
 [Install]
 WantedBy=multi-user.target
