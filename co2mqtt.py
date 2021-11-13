@@ -5,8 +5,8 @@ import json
 import logging
 from typing import Optional
 
-import co2meter as co2
 import aio_mqtt
+import co2meter as co2
 
 import config
 
@@ -18,7 +18,7 @@ class CarbonDioxideMQTT:
     def __init__(
             self,
             reconnection_interval: int = 10,
-            loop: Optional[asyncio.AbstractEventLoop] = None
+            loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
         self._reconnection_interval = reconnection_interval
         self._loop = loop or asyncio.get_event_loop()
@@ -36,7 +36,7 @@ class CarbonDioxideMQTT:
     def start(self):
         self._tasks = [
             self._loop.create_task(self._connect_forever()),
-            self._loop.create_task(self._periodic_publish())
+            self._loop.create_task(self._periodic_publish()),
         ]
 
     async def close(self) -> None:
@@ -83,8 +83,8 @@ class CarbonDioxideMQTT:
                             "device": device,
                         }),
                         qos=aio_mqtt.QOSLevel.QOS_1,
-                        retain=True
-                    )
+                        retain=True,
+                    ),
                 )
                 await self._client.publish(
                     aio_mqtt.PublishableMessage(
@@ -99,8 +99,8 @@ class CarbonDioxideMQTT:
                             "device": device,
                         }),
                         qos=aio_mqtt.QOSLevel.QOS_1,
-                        retain=True
-                    )
+                        retain=True,
+                    ),
                 )
 
                 logger.info("Wait for network interruptions...")
@@ -115,23 +115,27 @@ class CarbonDioxideMQTT:
                 aio_mqtt.ConnectionLostError,
                 aio_mqtt.ConnectionClosedError,
                 aio_mqtt.ServerDiedError,
+                OSError,
             ):
                 logger.exception(
                     "Connection lost. Will retry in %d seconds",
                     self._reconnection_interval,
                 )
-                await asyncio.sleep(self._reconnection_interval, loop=self._loop)
+                await asyncio.sleep(self._reconnection_interval)
 
             except aio_mqtt.ConnectionCloseForcedError:
                 logger.error("Connection close forced")
+                for t in self._tasks:
+                    t.cancel()
                 return
 
             except Exception:
                 logger.exception("Unhandled exception during connecting")
-                return
 
             else:
                 logger.info("Disconnected")
+                for t in self._tasks:
+                    t.cancel()
                 return
 
     def _read(self):
@@ -154,8 +158,8 @@ class CarbonDioxideMQTT:
                     'co2': co2_ppm,
                     'temperature': round(temp, 2),
                 }),
-                qos=aio_mqtt.QOSLevel.QOS_1
-            )
+                qos=aio_mqtt.QOSLevel.QOS_1,
+            ),
         )
 
     async def _periodic_publish(self, period=10):
@@ -171,7 +175,7 @@ class CarbonDioxideMQTT:
             except asyncio.TimeoutError:
                 logger.exception("Read and publish timeout")
                 continue
-            except aio_mqtt.ConnectionClosedError as e:
+            except aio_mqtt.ConnectionClosedError:
                 logger.exception("Connection closed")
                 await self._client.wait_for_connect()
                 continue
@@ -212,4 +216,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
