@@ -1,2 +1,2 @@
 git+https://github.com/vfilimonov/co2meter@8a2e12d205a7ac1c0a8fbc7fe885fc60cf2d1d0c#egg=CO2meter
-aio-mqtt==0.2.0
+aio-mqtt-mod==0.3.4
